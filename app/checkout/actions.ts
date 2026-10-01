@@ -3,10 +3,13 @@
 import { currentUser } from "@/auth";
 import { sql, type Order, type OrderItem, type Product } from "@/lib/db";
 import { sendOrderConfirmation } from "@/lib/mailgun";
+import { SHIPPING_ZONES, isShippingZone, normalizeNigerianPhone, type ShippingZone } from "@/lib/shipping";
 
 type PlaceOrderInput = {
   items: { productId: number; quantity: number }[];
-  shipping: { name: string; address: string; city: string; postal: string; country: string };
+  zone: ShippingZone;
+  shipping: { name: string; phone: string; address: string };
+  saveToProfile: boolean;
 };
 
 class CheckoutError extends Error {}
@@ -25,12 +28,15 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderId: num
   }
   if (quantities.size === 0) return { error: "Your cart is empty." };
 
-  const shipping = Object.fromEntries(
-    Object.entries(input.shipping ?? {}).map(([k, v]) => [k, String(v ?? "").trim().slice(0, 200)]),
-  ) as PlaceOrderInput["shipping"];
-  if (!shipping.name || !shipping.address || !shipping.city || !shipping.postal || !shipping.country) {
-    return { error: "Please fill in all shipping fields." };
-  }
+  if (!isShippingZone(input.zone)) return { error: "Please choose Lagos Island or Mainland for delivery." };
+  // The fee always comes from the server, never from the client.
+  const shippingKobo = SHIPPING_ZONES[input.zone].feeKobo;
+
+  const name = String(input.shipping?.name ?? "").trim().slice(0, 100);
+  const address = String(input.shipping?.address ?? "").trim().slice(0, 500);
+  const phone = normalizeNigerianPhone(String(input.shipping?.phone ?? ""));
+  if (!name || !address) return { error: "Please fill in your name and delivery address." };
+  if (!phone) return { error: "Please enter a valid Nigerian phone number, e.g. 0803 123 4567." };
 
   let order: Order;
   let items: OrderItem[];
@@ -49,20 +55,24 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderId: num
           throw new CheckoutError(`Only ${p.stock} of "${p.name}" left in stock.`);
         }
         // Prices always come from the database, never from the client.
-        return { product_id: p.id, product_name: p.name, unit_cents: p.price_cents, quantity };
+        return { product_id: p.id, product_name: p.name, unit_kobo: p.price_kobo, quantity };
       });
-      const total = lines.reduce((n, l) => n + l.unit_cents * l.quantity, 0);
+      const subtotal = lines.reduce((n, l) => n + l.unit_kobo * l.quantity, 0);
 
       const [created] = await tx<Order[]>`
-        INSERT INTO orders (user_id, total_cents, shipping_name, shipping_address, shipping_city, shipping_postal, shipping_country)
-        VALUES (${user.id}, ${total}, ${shipping.name}, ${shipping.address}, ${shipping.city}, ${shipping.postal}, ${shipping.country})
+        INSERT INTO orders (user_id, subtotal_kobo, shipping_kobo, total_kobo, shipping_zone, shipping_name, shipping_phone, shipping_address)
+        VALUES (${user.id}, ${subtotal}, ${shippingKobo}, ${subtotal + shippingKobo}, ${input.zone}, ${name}, ${phone}, ${address})
         RETURNING *`;
 
       for (const l of lines) {
         await tx`
-          INSERT INTO order_items (order_id, product_id, product_name, unit_cents, quantity)
-          VALUES (${created.id}, ${l.product_id}, ${l.product_name}, ${l.unit_cents}, ${l.quantity})`;
+          INSERT INTO order_items (order_id, product_id, product_name, unit_kobo, quantity)
+          VALUES (${created.id}, ${l.product_id}, ${l.product_name}, ${l.unit_kobo}, ${l.quantity})`;
         await tx`UPDATE products SET stock = stock - ${l.quantity} WHERE id = ${l.product_id}`;
+      }
+
+      if (input.saveToProfile) {
+        await tx`UPDATE users SET name = ${name}, phone = ${phone}, address = ${address}, zone = ${input.zone} WHERE id = ${user.id}`;
       }
 
       return [created, lines] as const;

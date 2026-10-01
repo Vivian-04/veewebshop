@@ -6,7 +6,7 @@ export type CartItem = {
   productId: number;
   slug: string;
   name: string;
-  priceCents: number;
+  priceKobo: number;
   imageUrl: string | null;
   quantity: number;
 };
@@ -14,7 +14,7 @@ export type CartItem = {
 type CartContextValue = {
   items: CartItem[];
   count: number;
-  subtotalCents: number;
+  subtotalKobo: number;
   add: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
   setQuantity: (productId: number, quantity: number) => void;
   remove: (productId: number) => void;
@@ -23,7 +23,7 @@ type CartContextValue = {
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
-const STORAGE_KEY = "shop-cart";
+const STORAGE_KEY = "shopwithvee-cart";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -72,7 +72,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     () => ({
       items,
       count: items.reduce((n, i) => n + i.quantity, 0),
-      subtotalCents: items.reduce((n, i) => n + i.quantity * i.priceCents, 0),
+      subtotalKobo: items.reduce((n, i) => n + i.quantity * i.priceKobo, 0),
       add,
       setQuantity,
       remove,

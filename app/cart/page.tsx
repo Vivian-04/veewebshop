@@ -4,9 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/components/CartProvider";
 import { formatPrice } from "@/lib/format";
+import { SHIPPING_ZONES } from "@/lib/shipping";
 
 export default function CartPage() {
-  const { items, subtotalCents, setQuantity, remove, ready } = useCart();
+  const { items, subtotalKobo, setQuantity, remove, ready } = useCart();
 
   if (!ready) return null;
 
@@ -31,7 +32,7 @@ export default function CartPage() {
               </Link>
               <div className="line-info">
                 <Link href={`/products/${i.slug}`}><strong>{i.name}</strong></Link>
-                <div className="muted">{formatPrice(i.priceCents)}</div>
+                <div className="muted">{formatPrice(i.priceKobo)}</div>
               </div>
               <div className="qty">
                 <button aria-label="Decrease" onClick={() => setQuantity(i.productId, i.quantity - 1)}>−</button>
@@ -43,9 +44,14 @@ export default function CartPage() {
           ))}
         </div>
         <div className="panel">
-          <div className="summary-row"><span>Subtotal</span><span>{formatPrice(subtotalCents)}</span></div>
-          <div className="summary-row muted"><span>Shipping</span><span>Free</span></div>
-          <div className="summary-row total"><span>Total</span><span>{formatPrice(subtotalCents)}</span></div>
+          <div className="summary-row"><span>Subtotal</span><span>{formatPrice(subtotalKobo)}</span></div>
+          <div className="summary-row muted">
+            <span>Delivery</span>
+            <span>{formatPrice(SHIPPING_ZONES.mainland.feeKobo)} – {formatPrice(SHIPPING_ZONES.island.feeKobo)}</span>
+          </div>
+          <p className="muted small" style={{ margin: "4px 0 0" }}>
+            Mainland {formatPrice(SHIPPING_ZONES.mainland.feeKobo)} · Island {formatPrice(SHIPPING_ZONES.island.feeKobo)}. Choose at checkout.
+          </p>
           <Link href="/checkout" className="btn primary block" style={{ marginTop: 16 }}>Checkout</Link>
         </div>
       </div>

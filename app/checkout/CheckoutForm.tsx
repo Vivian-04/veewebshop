@@ -4,13 +4,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Avatar } from "@/components/Avatar";
 import { useCart } from "@/components/CartProvider";
 import { formatPrice } from "@/lib/format";
+import { SHIPPING_ZONES, type ShippingZone } from "@/lib/shipping";
 import { placeOrder } from "./actions";
 
-export function CheckoutForm({ defaultName, email }: { defaultName: string; email: string }) {
-  const { items, subtotalCents, clear, ready } = useCart();
+type Profile = {
+  name: string;
+  email: string;
+  image: string | null;
+  phone: string;
+  address: string;
+  zone: ShippingZone | null;
+};
+
+export function CheckoutForm({ profile }: { profile: Profile }) {
+  const { items, subtotalKobo, clear, ready } = useCart();
   const router = useRouter();
+  const [zone, setZone] = useState<ShippingZone | null>(profile.zone);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [placedOrderId, setPlacedOrderId] = useState<number | null>(null);
@@ -31,18 +43,28 @@ export function CheckoutForm({ defaultName, email }: { defaultName: string; emai
     );
   }
 
-  function onSubmit(formData: FormData) {
+  const shippingKobo = zone ? SHIPPING_ZONES[zone].feeKobo : 0;
+  const totalKobo = subtotalKobo + shippingKobo;
+
+  // A plain submit handler (not a form `action`) so React doesn't reset the form and wipe what was typed on error.
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     setError(null);
+    if (!zone) {
+      setError("Please choose Lagos Island or Mainland for delivery.");
+      return;
+    }
     startTransition(async () => {
       const result = await placeOrder({
         items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        zone,
         shipping: {
           name: String(formData.get("name") ?? ""),
+          phone: String(formData.get("phone") ?? ""),
           address: String(formData.get("address") ?? ""),
-          city: String(formData.get("city") ?? ""),
-          postal: String(formData.get("postal") ?? ""),
-          country: String(formData.get("country") ?? ""),
         },
+        saveToProfile: formData.get("saveToProfile") === "on",
       });
       if ("error" in result) {
         setError(result.error);
@@ -56,38 +78,68 @@ export function CheckoutForm({ defaultName, email }: { defaultName: string; emai
 
   return (
     <div className="two-col">
-      <form action={onSubmit} className="panel fields">
-        {error && <div className="alert error">{error}</div>}
-        <label>
-          Email
-          <input value={email} disabled />
-        </label>
-        <label>
-          Full name
-          <input name="name" defaultValue={defaultName} required autoComplete="name" />
-        </label>
-        <label>
-          Address
-          <input name="address" required autoComplete="street-address" />
-        </label>
-        <div className="field-row">
+      <form onSubmit={onSubmit} className="fields">
+        <Link href="/profile" className="panel profile-card">
+          <Avatar name={profile.name} email={profile.email} image={profile.image} size={44} />
+          <div>
+            <strong>{profile.name || "Your profile"}</strong>
+            <div className="muted small">{profile.email}</div>
+          </div>
+          <span className="muted small push-right">View profile →</span>
+        </Link>
+
+        <div className="panel fields">
+          {error && <div className="alert error" role="alert">{error}</div>}
+
+          <fieldset className="zones">
+            <legend>Where should we deliver?</legend>
+            {(Object.keys(SHIPPING_ZONES) as ShippingZone[]).map((key) => (
+              <label key={key} className={`zone-option${zone === key ? " selected" : ""}`}>
+                <input type="radio" name="zone" value={key} checked={zone === key} onChange={() => setZone(key)} />
+                <span className="zone-text">
+                  <strong>{SHIPPING_ZONES[key].label}</strong>
+                  <span className="muted small">{SHIPPING_ZONES[key].examples}</span>
+                </span>
+                <span className="zone-fee">{formatPrice(SHIPPING_ZONES[key].feeKobo)}</span>
+              </label>
+            ))}
+          </fieldset>
+
           <label>
-            City
-            <input name="city" required autoComplete="address-level2" />
+            Full name
+            <input name="name" defaultValue={profile.name} required autoComplete="name" />
           </label>
           <label>
-            Postal code
-            <input name="postal" required autoComplete="postal-code" />
+            Phone number
+            <input
+              name="phone"
+              type="tel"
+              defaultValue={profile.phone}
+              required
+              autoComplete="tel"
+              placeholder="0803 123 4567"
+            />
           </label>
+          <label>
+            Delivery address
+            <textarea
+              name="address"
+              defaultValue={profile.address}
+              required
+              rows={3}
+              autoComplete="street-address"
+              placeholder="House number, street, area and a nearby landmark"
+            />
+          </label>
+          <label className="checkbox">
+            <input type="checkbox" name="saveToProfile" defaultChecked />
+            Save these details to my profile
+          </label>
+          <p className="muted small" style={{ margin: 0 }}>Payment is collected on delivery (cash or transfer).</p>
+          <button className="btn primary block" disabled={pending}>
+            {pending ? "Placing order…" : `Place order · ${formatPrice(totalKobo)}`}
+          </button>
         </div>
-        <label>
-          Country
-          <input name="country" required autoComplete="country-name" />
-        </label>
-        <p className="muted" style={{ margin: 0 }}>Payment is collected on delivery.</p>
-        <button className="btn primary block" disabled={pending}>
-          {pending ? "Placing order…" : `Place order · ${formatPrice(subtotalCents)}`}
-        </button>
       </form>
 
       <div className="panel">
@@ -98,10 +150,15 @@ export function CheckoutForm({ defaultName, email }: { defaultName: string; emai
               {i.imageUrl && <Image src={i.imageUrl} alt={i.name} fill sizes="48px" />}
             </Link>
             <Link href={`/products/${i.slug}`} className="line-info">{i.name} × {i.quantity}</Link>
-            <span>{formatPrice(i.priceCents * i.quantity)}</span>
+            <span>{formatPrice(i.priceKobo * i.quantity)}</span>
           </div>
         ))}
-        <div className="summary-row total"><span>Total</span><span>{formatPrice(subtotalCents)}</span></div>
+        <div className="summary-row" style={{ marginTop: 8 }}><span>Subtotal</span><span>{formatPrice(subtotalKobo)}</span></div>
+        <div className="summary-row">
+          <span>Delivery{zone ? ` (${SHIPPING_ZONES[zone].label})` : ""}</span>
+          <span>{zone ? formatPrice(shippingKobo) : "Choose zone"}</span>
+        </div>
+        <div className="summary-row total"><span>Total</span><span>{formatPrice(totalKobo)}</span></div>
       </div>
     </div>
   );

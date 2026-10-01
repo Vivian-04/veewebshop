@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/auth";
 import { sql, type Order, type OrderItem } from "@/lib/db";
-import { formatPrice } from "@/lib/format";
+import { formatDateTime, formatPrice } from "@/lib/format";
+import { SHIPPING_ZONES } from "@/lib/shipping";
 
 export default async function OrderPage({
   params,
@@ -14,7 +15,7 @@ export default async function OrderPage({
 }) {
   const [{ id }, { placed }] = await Promise.all([params, searchParams]);
   const user = await currentUser();
-  if (!user) redirect(`/api/auth/signin?callbackUrl=/orders/${id}`);
+  if (!user) redirect(`/signin?callbackUrl=/orders/${encodeURIComponent(id)}`);
 
   const orderId = Number(id);
   if (!Number.isInteger(orderId)) notFound();
@@ -23,7 +24,7 @@ export default async function OrderPage({
   const [order] = await sql<Order[]>`SELECT * FROM orders WHERE id = ${orderId} AND user_id = ${user.id}`;
   if (!order) notFound();
   const items = await sql<(OrderItem & { slug: string; image_url: string | null })[]>`
-    SELECT oi.product_id, oi.product_name, oi.unit_cents, oi.quantity, p.slug, p.image_url
+    SELECT oi.product_id, oi.product_name, oi.unit_kobo, oi.quantity, p.slug, p.image_url
     FROM order_items oi JOIN products p ON p.id = oi.product_id
     WHERE oi.order_id = ${order.id} ORDER BY oi.id`;
 
@@ -32,7 +33,7 @@ export default async function OrderPage({
       <h1>Order #{order.id}</h1>
       {placed && (
         <div className="alert success">
-          Thank you! Your order has been placed.
+          Thank you! Your order has been placed. We&apos;ll call {order.shipping_phone} to arrange delivery.
           {order.email_sent_at ? ` A confirmation email is on its way to ${user.email}.` : ""}
         </div>
       )}
@@ -44,25 +45,31 @@ export default async function OrderPage({
                 {i.image_url && <Image src={i.image_url} alt={i.product_name} fill sizes="48px" />}
               </Link>
               <Link href={`/products/${i.slug}`} className="line-info">{i.product_name} × {i.quantity}</Link>
-              <span>{formatPrice(i.unit_cents * i.quantity)}</span>
+              <span>{formatPrice(i.unit_kobo * i.quantity)}</span>
             </div>
           ))}
-          <div className="summary-row total"><span>Total</span><span>{formatPrice(order.total_cents)}</span></div>
+          <div className="summary-row" style={{ marginTop: 8 }}><span>Subtotal</span><span>{formatPrice(order.subtotal_kobo)}</span></div>
+          <div className="summary-row">
+            <span>Delivery ({SHIPPING_ZONES[order.shipping_zone].label})</span>
+            <span>{formatPrice(order.shipping_kobo)}</span>
+          </div>
+          <div className="summary-row total"><span>Total</span><span>{formatPrice(order.total_kobo)}</span></div>
         </div>
         <div className="panel">
-          <h3 style={{ marginTop: 0 }}>Shipping to</h3>
-          <p style={{ margin: 0 }}>
-            {order.shipping_name}<br />
-            {order.shipping_address}<br />
-            {order.shipping_city} {order.shipping_postal}<br />
-            {order.shipping_country}
+          <h3 style={{ marginTop: 0 }}>Delivering to</h3>
+          <p style={{ margin: 0, whiteSpace: "pre-line" }}>
+            <strong>{order.shipping_name}</strong>
+            {"\n"}{order.shipping_phone}
+            {"\n"}{order.shipping_address}
+            {"\n"}{SHIPPING_ZONES[order.shipping_zone].label}
           </p>
           <p className="muted">
-            Placed {order.created_at.toLocaleString()} · <span style={{ textTransform: "capitalize" }}>{order.status}</span>
+            Placed {formatDateTime(order.created_at)} · <span className={`status ${order.status}`}>{order.status}</span>
           </p>
+          <p className="muted small">Payment on delivery.</p>
         </div>
       </div>
-      <p><Link href="/orders" className="muted">← All orders</Link></p>
+      <p><Link href="/profile" className="text-link">← Back to my profile</Link></p>
     </>
   );
 }

@@ -1,29 +1,32 @@
-# Hearth & Co. — shop
+# ShopWithVee
 
-Next.js (App Router) storefront with Google sign-in, a Postgres database (Supabase **or** Neon), and Mailgun order-confirmation emails.
+A Nigerian online shop built with Next.js (App Router): naira pricing, Lagos Island/Mainland delivery, email + password and Google sign-in, a Postgres database (Supabase **or** Neon), and Mailgun order-confirmation emails.
 
 ## Features
 
-- Product catalogue and product pages (read from Postgres)
+- 15 Nigerian-made products in naira (₦), with category filters
 - Cart (kept in the browser's localStorage)
-- Checkout page (requires Google sign-in): shipping details → order saved in one transaction, with stock locked and decremented and prices re-read from the DB
+- Checkout (requires an account): choose **Lagos Island** or **Lagos Mainland** for a flat delivery fee, enter phone and address; the order is saved in one transaction, with stock locked and prices and fees re-read on the server
+- Sign up / sign in with email and password (scrypt-hashed), plus Google once configured
+- Profile page: your details, saved delivery address and zone (used to pre-fill checkout), and order history
 - Order confirmation email via Mailgun
-- Order history and order detail pages, scoped to the signed-in user
+- Payment on delivery
+
+Delivery fees are set in [`lib/shipping.ts`](lib/shipping.ts) (Mainland ₦3,000, Island ₦5,000). Money is stored in kobo (₦1 = 100 kobo).
 
 ## Quick local test (no accounts needed)
 
-Runs everything on your machine: an embedded Postgres (PGlite), a dev-only email login, and email previews saved to `.emails/`.
+Runs everything on your machine: an embedded Postgres (PGlite) and email previews saved to `.emails/`.
 
 1. Create `.env.local` with:
    ```
    DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5433/postgres"
    AUTH_SECRET="<output of: npx auth secret>"
-   AUTH_DEV_LOGIN=true
    ```
-2. In one terminal: `npm run db:local` (creates tables and sample products; data is kept in `.pglite/`, delete that folder to reset)
-3. In another: `npm run dev`, then open http://localhost:3000 and sign in with any email.
+2. In one terminal: `npm run db:local` (creates tables and the products; data is kept in `.pglite/`, delete that folder to reset)
+3. In another: `npm run dev`, then open http://localhost:3000 and create an account.
 
-The dev login only works when `AUTH_DEV_LOGIN=true` **and** the app is not a production build. Google sign-in appears automatically once `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` are set, and real emails go out once the Mailgun variables are set.
+Google sign-in appears automatically once `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` are set, and real emails go out once the Mailgun variables are set.
 
 ## Setup
 
@@ -82,16 +85,19 @@ Set the same environment variables in your host, set `APP_URL` to your public UR
 ## Project layout
 
 ```
-auth.ts                  Auth.js config (Google), upserts users into the DB
+auth.ts                  Auth.js config: email/password + Google
+app/(auth)/              Sign-in and sign-up pages and actions
+app/profile/             Profile page, details form, order history
+app/checkout/            Checkout form and placeOrder action (transaction + email)
+lib/shipping.ts          Island/Mainland delivery fees, phone validation
+lib/password.ts          scrypt password hashing
 lib/db.ts                Postgres client + row types
 lib/mailgun.ts           Mailgun REST client + confirmation email template
-db/schema.sql, seed.sql  Tables and sample products
-app/checkout/actions.ts  placeOrder server action (transaction + email)
-app/                     Pages: /, /products/[slug], /cart, /checkout, /orders, /orders/[id]
-components/              Cart context and client components
+db/schema.sql, seed.sql  Tables and products
 ```
 
 ## Notes
 
-- Payment is "collect on delivery"; no payment processor is wired in. Stripe Checkout would plug into `placeOrder`.
-- To manage products, edit the `products` table in the Supabase/Neon dashboard.
+- Payment is collected on delivery; no payment processor is wired in yet. Paystack or Flutterwave would plug into `placeOrder`.
+- To manage products, edit the `products` table in the Supabase/Neon dashboard (prices are in kobo).
+- `db/schema.sql` creates tables only if they don't exist. If you created the tables with an earlier version of this project, drop them first (or start a fresh database).

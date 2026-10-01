@@ -1,17 +1,24 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { currentUser } from "@/auth";
 import { CheckoutForm } from "./CheckoutForm";
 
 export default async function CheckoutPage() {
-  const session = await auth();
-  if (!session?.user) {
-    redirect("/api/auth/signin?callbackUrl=/checkout");
-  }
+  const user = await currentUser();
+  if (!user) redirect("/signin?callbackUrl=/checkout");
 
   return (
     <>
       <h1>Checkout</h1>
-      <CheckoutForm defaultName={session.user.name ?? ""} email={session.user.email ?? ""} />
+      <CheckoutForm
+        profile={{
+          name: user.name ?? "",
+          email: user.email,
+          image: user.image,
+          phone: user.phone ?? "",
+          address: user.address ?? "",
+          zone: user.zone,
+        }}
+      />
     </>
   );
 }

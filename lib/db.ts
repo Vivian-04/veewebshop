@@ -11,7 +11,8 @@ export const sql =
   postgres(process.env.DATABASE_URL!, {
     ssl: isLocal ? false : "require",
     prepare: false,
-    max: 5,
+    // The local PGlite server is single-threaded and mixes up interleaved queries from parallel connections.
+    max: isLocal ? 1 : 5,
     // BIGSERIAL ids (int8) come back as strings by default; they fit comfortably in a JS number.
     types: {
       bigint: { to: 20, from: [20], serialize: (n: number) => String(n), parse: (s: string) => Number(s) },
@@ -20,12 +21,24 @@ export const sql =
 
 if (process.env.NODE_ENV !== "production") globalForDb.sql = sql;
 
+export type User = {
+  id: number;
+  email: string;
+  name: string | null;
+  image: string | null;
+  phone: string | null;
+  address: string | null;
+  zone: "island" | "mainland" | null;
+  created_at: Date;
+};
+
 export type Product = {
   id: number;
   slug: string;
   name: string;
   description: string;
-  price_cents: number;
+  category: string;
+  price_kobo: number;
   image_url: string | null;
   stock: number;
 };
@@ -34,12 +47,13 @@ export type Order = {
   id: number;
   user_id: number;
   status: string;
-  total_cents: number;
+  subtotal_kobo: number;
+  shipping_kobo: number;
+  total_kobo: number;
+  shipping_zone: "island" | "mainland";
   shipping_name: string;
+  shipping_phone: string;
   shipping_address: string;
-  shipping_city: string;
-  shipping_postal: string;
-  shipping_country: string;
   email_sent_at: Date | null;
   created_at: Date;
 };
@@ -47,6 +61,6 @@ export type Order = {
 export type OrderItem = {
   product_id: number;
   product_name: string;
-  unit_cents: number;
+  unit_kobo: number;
   quantity: number;
 };

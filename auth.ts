@@ -2,40 +2,45 @@ import NextAuth from "next-auth";
 import type { Provider } from "next-auth/providers";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import { sql } from "@/lib/db";
+import { sql, type User } from "@/lib/db";
+import { verifyPassword } from "@/lib/password";
 
 export const googleEnabled = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
 
-// Local testing only: sign in with any email, no password. Never active in production builds.
-export const devLoginEnabled = process.env.NODE_ENV !== "production" && process.env.AUTH_DEV_LOGIN === "true";
+const providers: Provider[] = [
+  Credentials({
+    id: "credentials",
+    name: "Email and password",
+    credentials: { email: { type: "email" }, password: { type: "password" } },
+    async authorize(credentials) {
+      const email = String(credentials?.email ?? "").trim().toLowerCase();
+      const password = String(credentials?.password ?? "");
+      if (!email || !password) return null;
 
-const providers: Provider[] = [];
+      const [user] = await sql<{ id: number; email: string; name: string | null; password_hash: string | null }[]>`
+        SELECT id, email, name, password_hash FROM users WHERE email = ${email}`;
+      // Accounts created with Google have no password.
+      if (!user?.password_hash || !(await verifyPassword(password, user.password_hash))) return null;
+
+      return { id: String(user.id), email: user.email, name: user.name };
+    },
+  }),
+];
 if (googleEnabled) providers.push(Google);
-if (devLoginEnabled) {
-  providers.push(
-    Credentials({
-      id: "dev-login",
-      name: "Dev login (local only)",
-      credentials: { email: { label: "Email", type: "email", placeholder: "test@example.com" } },
-      authorize(credentials) {
-        const email = String(credentials?.email ?? "").trim().toLowerCase();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
-        return { id: email, email, name: email.split("@")[0] };
-      },
-    }),
-  );
-}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
+  pages: { signIn: "/signin" },
   callbacks: {
-    // Persist every Google user in our own users table.
-    async signIn({ user }) {
+    async signIn({ user, account }) {
       if (!user.email) return false;
-      await sql`
-        INSERT INTO users (email, name, image)
-        VALUES (${user.email}, ${user.name ?? null}, ${user.image ?? null})
-        ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, image = EXCLUDED.image`;
+      // Persist Google users in our own users table (password users are created at sign-up).
+      if (account?.provider === "google") {
+        await sql`
+          INSERT INTO users (email, name, image)
+          VALUES (${user.email.toLowerCase()}, ${user.name ?? null}, ${user.image ?? null})
+          ON CONFLICT (email) DO UPDATE SET image = EXCLUDED.image, name = COALESCE(users.name, EXCLUDED.name)`;
+      }
       return true;
     },
   },
@@ -44,9 +49,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 /** Returns the DB user row for the signed-in session, or null. */
 export async function currentUser() {
   const session = await auth();
-  const email = session?.user?.email;
+  const email = session?.user?.email?.toLowerCase();
   if (!email) return null;
-  const [user] = await sql<{ id: number; email: string; name: string | null }[]>`
-    SELECT id, email, name FROM users WHERE email = ${email}`;
+  const [user] = await sql<User[]>`
+    SELECT id, email, name, image, phone, address, zone, created_at FROM users WHERE email = ${email}`;
   return user ?? null;
+}
+
+/** Only allow redirects to paths on this site. */
+export function safeCallbackUrl(value: unknown) {
+  const url = typeof value === "string" ? value : "";
+  return url.startsWith("/") && !url.startsWith("//") ? url : "/";
 }
