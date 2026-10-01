@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   },
   // Lets other devices (e.g. your phone on the same Wi-Fi) use the dev server.
   // Set DEV_ALLOWED_ORIGINS in .env.local to a comma-separated list of hostnames/IPs.
+  // Hide the Next.js dev-tools button during development (it never appears in production anyway).
+  // Compile and runtime errors are still shown.
+  devIndicators: false,
   allowedDevOrigins: (process.env.DEV_ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
 };
 
