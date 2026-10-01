@@ -41,6 +41,7 @@ Then fill in `.env.local`:
 
 Pick one; the code works with any Postgres URL.
 
+- **Neon (this project's setup)**: install the CLI (`npm i -g neon`), `neon login`, then `neon link --project-id <project-id> --branch production -y`. This writes a git-ignored `.neon` file and pulls `DATABASE_URL` (pooled) into `.env.local`. `neon.ts` declares the project's Neon services (a private `uploads` bucket); apply it with `neon deploy`.
 - **Supabase**: create a project → **Project Settings → Database → Connection string** → copy the **Transaction pooler** URI.
 - **Neon**: create a project → **Connection Details** → copy the **pooled** connection string.
 
