@@ -75,8 +75,9 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderId: num
 
   // The order is committed; a failed email shouldn't fail the checkout.
   try {
-    await sendOrderConfirmation(user.email, order, items);
-    await sql`UPDATE orders SET email_sent_at = now() WHERE id = ${order.id}`;
+    if (await sendOrderConfirmation(user.email, order, items)) {
+      await sql`UPDATE orders SET email_sent_at = now() WHERE id = ${order.id}`;
+    }
   } catch (err) {
     console.error(`Confirmation email for order ${order.id} failed`, err);
   }

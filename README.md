@@ -10,6 +10,21 @@ Next.js (App Router) storefront with Google sign-in, a Postgres database (Supaba
 - Order confirmation email via Mailgun
 - Order history and order detail pages, scoped to the signed-in user
 
+## Quick local test (no accounts needed)
+
+Runs everything on your machine: an embedded Postgres (PGlite), a dev-only email login, and email previews saved to `.emails/`.
+
+1. Create `.env.local` with:
+   ```
+   DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5433/postgres"
+   AUTH_SECRET="<output of: npx auth secret>"
+   AUTH_DEV_LOGIN=true
+   ```
+2. In one terminal: `npm run db:local` (creates tables and sample products; data is kept in `.pglite/`, delete that folder to reset)
+3. In another: `npm run dev`, then open http://localhost:3000 and sign in with any email.
+
+The dev login only works when `AUTH_DEV_LOGIN=true` **and** the app is not a production build. Google sign-in appears automatically once `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` are set, and real emails go out once the Mailgun variables are set.
+
 ## Setup
 
 ```bash

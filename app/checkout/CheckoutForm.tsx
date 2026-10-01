@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -12,8 +13,14 @@ export function CheckoutForm({ defaultName, email }: { defaultName: string; emai
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [placedOrderId, setPlacedOrderId] = useState<number | null>(null);
 
   if (!ready) return null;
+
+  // The cart is cleared once the order is placed; don't flash the empty-cart state while redirecting.
+  if (placedOrderId) {
+    return <div className="empty"><p>Order #{placedOrderId} placed. Taking you to your confirmation…</p></div>;
+  }
 
   if (items.length === 0) {
     return (
@@ -41,6 +48,7 @@ export function CheckoutForm({ defaultName, email }: { defaultName: string; emai
         setError(result.error);
         return;
       }
+      setPlacedOrderId(result.orderId);
       clear();
       router.push(`/orders/${result.orderId}?placed=1`);
     });
@@ -85,8 +93,11 @@ export function CheckoutForm({ defaultName, email }: { defaultName: string; emai
       <div className="panel">
         <h3 style={{ marginTop: 0 }}>Order summary</h3>
         {items.map((i) => (
-          <div key={i.productId} className="summary-row">
-            <span>{i.name} × {i.quantity}</span>
+          <div key={i.productId} className="line compact">
+            <Link href={`/products/${i.slug}`} className="line-img" aria-label={`View ${i.name}`}>
+              {i.imageUrl && <Image src={i.imageUrl} alt={i.name} fill sizes="48px" />}
+            </Link>
+            <Link href={`/products/${i.slug}`} className="line-info">{i.name} × {i.quantity}</Link>
             <span>{formatPrice(i.priceCents * i.quantity)}</span>
           </div>
         ))}

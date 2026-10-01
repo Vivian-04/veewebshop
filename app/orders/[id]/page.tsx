@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/auth";
@@ -21,8 +22,10 @@ export default async function OrderPage({
   // Scoped to the current user so people can't view each other's orders.
   const [order] = await sql<Order[]>`SELECT * FROM orders WHERE id = ${orderId} AND user_id = ${user.id}`;
   if (!order) notFound();
-  const items = await sql<OrderItem[]>`
-    SELECT product_id, product_name, unit_cents, quantity FROM order_items WHERE order_id = ${order.id} ORDER BY id`;
+  const items = await sql<(OrderItem & { slug: string; image_url: string | null })[]>`
+    SELECT oi.product_id, oi.product_name, oi.unit_cents, oi.quantity, p.slug, p.image_url
+    FROM order_items oi JOIN products p ON p.id = oi.product_id
+    WHERE oi.order_id = ${order.id} ORDER BY oi.id`;
 
   return (
     <>
@@ -36,8 +39,11 @@ export default async function OrderPage({
       <div className="two-col">
         <div className="panel">
           {items.map((i) => (
-            <div key={i.product_id} className="summary-row">
-              <span>{i.product_name} × {i.quantity}</span>
+            <div key={i.product_id} className="line compact">
+              <Link href={`/products/${i.slug}`} className="line-img" aria-label={`View ${i.product_name}`}>
+                {i.image_url && <Image src={i.image_url} alt={i.product_name} fill sizes="48px" />}
+              </Link>
+              <Link href={`/products/${i.slug}`} className="line-info">{i.product_name} × {i.quantity}</Link>
               <span>{formatPrice(i.unit_cents * i.quantity)}</span>
             </div>
           ))}

@@ -2,11 +2,14 @@ import postgres from "postgres";
 
 const globalForDb = globalThis as unknown as { sql?: postgres.Sql };
 
+// Hosted databases (Supabase, Neon) need TLS; the local dev database doesn't speak it.
+const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(process.env.DATABASE_URL ?? "");
+
 // `prepare: false` keeps this compatible with Supabase's transaction pooler and Neon's pgbouncer.
 export const sql =
   globalForDb.sql ??
   postgres(process.env.DATABASE_URL!, {
-    ssl: "require",
+    ssl: isLocal ? false : "require",
     prepare: false,
     max: 5,
     // BIGSERIAL ids (int8) come back as strings by default; they fit comfortably in a JS number.

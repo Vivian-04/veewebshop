@@ -26,9 +26,9 @@ export default function CartPage() {
         <div className="panel">
           {items.map((i) => (
             <div key={i.productId} className="line">
-              <div className="line-img">
+              <Link href={`/products/${i.slug}`} className="line-img" aria-label={`View ${i.name}`}>
                 {i.imageUrl && <Image src={i.imageUrl} alt={i.name} fill sizes="64px" />}
-              </div>
+              </Link>
               <div className="line-info">
                 <Link href={`/products/${i.slug}`}><strong>{i.name}</strong></Link>
                 <div className="muted">{formatPrice(i.priceCents)}</div>

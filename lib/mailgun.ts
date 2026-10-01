@@ -1,11 +1,20 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import { formatPrice } from "./format";
 import type { Order, OrderItem } from "./db";
 
-async function sendEmail(to: string, subject: string, html: string, text: string) {
+/** Sends via Mailgun. Returns false if the email was only previewed locally (Mailgun not configured in dev). */
+async function sendEmail(to: string, subject: string, html: string, text: string): Promise<boolean> {
   const { MAILGUN_API_KEY, MAILGUN_DOMAIN, MAIL_FROM } = process.env;
   const base = process.env.MAILGUN_API_BASE ?? "https://api.mailgun.net";
   if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN || !MAIL_FROM) {
-    throw new Error("Mailgun is not configured (MAILGUN_API_KEY, MAILGUN_DOMAIN, MAIL_FROM)");
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Mailgun is not configured (MAILGUN_API_KEY, MAILGUN_DOMAIN, MAIL_FROM)");
+    }
+    const file = `.emails/${Date.now()}-${subject.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.html`;
+    await mkdir(".emails", { recursive: true });
+    await writeFile(file, `<!-- To: ${to} | Subject: ${subject} -->\n${html}`);
+    console.log(`[mail] Mailgun not configured; email to ${to} saved to ${file}`);
+    return false;
   }
 
   const res = await fetch(`${base}/v3/${MAILGUN_DOMAIN}/messages`, {
@@ -14,6 +23,7 @@ async function sendEmail(to: string, subject: string, html: string, text: string
     body: new URLSearchParams({ from: MAIL_FROM, to, subject, html, text }),
   });
   if (!res.ok) throw new Error(`Mailgun error ${res.status}: ${await res.text()}`);
+  return true;
 }
 
 const HTML_ESCAPES: Record<string, string> = {
@@ -56,5 +66,5 @@ export async function sendOrderConfirmation(to: string, order: Order, items: Ord
     items.map((i) => `- ${i.product_name} x ${i.quantity}: ${formatPrice(i.unit_cents * i.quantity)}`).join("\n") +
     `\n\nTotal: ${formatPrice(order.total_cents)}\n\nView your order: ${url}`;
 
-  await sendEmail(to, `Order #${order.id} confirmed`, html, text);
+  return sendEmail(to, `Order #${order.id} confirmed`, html, text);
 }

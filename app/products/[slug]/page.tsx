@@ -11,11 +11,19 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="product">
-      <div className="product-img">
-        {product.image_url && (
+      {product.image_url ? (
+        <a
+          href={product.image_url.replace(/\?.*$/, "")}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="product-img"
+          title="Open full-size image"
+        >
           <Image src={product.image_url} alt={product.name} fill priority sizes="(max-width: 760px) 100vw, 520px" />
-        )}
-      </div>
+        </a>
+      ) : (
+        <div className="product-img" />
+      )}
       <div>
         <h1>{product.name}</h1>
         <span className="price">{formatPrice(product.price_cents)}</span>

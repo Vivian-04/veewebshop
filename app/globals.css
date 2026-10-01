@@ -88,6 +88,12 @@ nav a:hover { color: var(--accent); }
 .line:last-child { border-bottom: 0; }
 .line-img { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; position: relative; flex-shrink: 0; background: var(--border); }
 .line-img img { object-fit: cover; }
+.line.compact { padding: 8px 0; gap: 12px; }
+.line.compact .line-img { width: 48px; height: 48px; }
+a.line-img, a.product-img { display: block; cursor: pointer; transition: opacity .15s, box-shadow .15s; }
+a.line-img:hover, a.product-img:hover { opacity: .88; box-shadow: 0 0 0 2px var(--accent); }
+a.product-img { cursor: zoom-in; }
+a.line-info:hover { color: var(--accent); }
 .line-info { flex: 1; min-width: 0; }
 .qty { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 8px; }
 .qty button { background: none; border: 0; width: 30px; height: 30px; cursor: pointer; color: var(--text); font-size: 1rem; }
