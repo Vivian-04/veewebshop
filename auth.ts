@@ -30,12 +30,15 @@ if (googleEnabled) providers.push(Google);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
-  pages: { signIn: "/signin" },
+  // Errors go to our sign-in page (as ?error=...) instead of Auth.js's bare error screen.
+  pages: { signIn: "/signin", error: "/signin" },
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (!user.email) return false;
       // Persist Google users in our own users table (password users are created at sign-up).
       if (account?.provider === "google") {
+        // Google sign-in joins any existing account with the same email, so only trust emails Google has verified.
+        if (profile?.email_verified !== true) return false;
         await sql`
           INSERT INTO users (email, name, image)
           VALUES (${user.email.toLowerCase()}, ${user.name ?? null}, ${user.image ?? null})

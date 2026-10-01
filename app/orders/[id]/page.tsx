@@ -34,7 +34,10 @@ export default async function OrderPage({
       {placed && (
         <div className="alert success">
           Thank you! Your order has been placed. We&apos;ll call {order.shipping_phone} to arrange delivery.
-          {order.email_sent_at ? ` A confirmation email is on its way to ${user.email}.` : ""}
+          {/* email_sent_at only means our email provider accepted the message; delivery isn't guaranteed. */}
+          {order.email_sent_at
+            ? ` We're sending a confirmation email to ${user.email}. If it doesn't arrive, check your spam folder. Your order is saved either way, and you can always find it on your profile.`
+            : " You can always find this order on your profile."}
         </div>
       )}
       <div className="two-col">

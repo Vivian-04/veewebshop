@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS orders (
   shipping_name     TEXT NOT NULL,
   shipping_phone    TEXT NOT NULL,
   shipping_address  TEXT NOT NULL,
-  email_sent_at     TIMESTAMPTZ,
+  email_sent_at     TIMESTAMPTZ,        -- when Mailgun accepted the confirmation (not proof of delivery)
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
