@@ -18,6 +18,14 @@ A Nigerian online shop built with Next.js (App Router): naira pricing, Lagos Isl
 
 Delivery fees are set in [`lib/shipping.ts`](lib/shipping.ts) (Mainland ₦3,000, Island ₦5,000). Money is stored in kobo (₦1 = 100 kobo).
 
+## Mobile app (`mobile/`)
+
+An Expo (React Native) app for iPhone and Android that uses the website's JSON API, so the same account and the same cart work on both.
+
+- **API** (`app/api`): `GET /api/products`, `GET /api/products/[slug]`, `GET|POST|PATCH|DELETE /api/cart`, `POST /api/cart/merge`, `GET /api/cart/version`, `GET|POST /api/orders`, `GET /api/orders/[id]`, `GET /api/me`, and `POST /api/mobile/signin|signup|signout`. The website calls these with its session cookie; the app sends `Authorization: Bearer <token>`.
+- **Cart sync**: signed-in carts are stored in the database. Both the website and the app check `/api/cart/version` every 2 seconds while open (and when you return to them), and reload the cart only when it changed.
+- **Run it**: `cd mobile && npm install && npx expo start`, then scan the QR code with the iPhone Camera (or Android Expo Go app). The app talks to `https://shopwithvee.netlify.app` by default; set `EXPO_PUBLIC_API_URL` in `mobile/.env.local` to use a local server.
+
 ## Quick local test (no accounts needed)
 
 Runs everything on your machine: an embedded Postgres (PGlite) and email previews saved to `.emails/`.
