@@ -4,9 +4,10 @@
 
 [build.environment]
   # Netlify's secret scanner fails the build if an env var's value appears in the repo.
-  # These two aren't secret: MAILGUN_API_BASE is Mailgun's public API URL, and ADMIN_EMAILS
-  # is the same address shown as the public contact email. All real secrets are still scanned.
-  SECRETS_SCAN_OMIT_KEYS = "MAILGUN_API_BASE,ADMIN_EMAILS"
+  # These aren't secret: MAILGUN_API_BASE is Mailgun's public API URL, ADMIN_EMAILS is the same
+  # address shown as the public contact email, and APP_URL / AUTH_URL are the site's public address
+  # (which the mobile app also points at). All real secrets are still scanned.
+  SECRETS_SCAN_OMIT_KEYS = "MAILGUN_API_BASE,ADMIN_EMAILS,APP_URL,AUTH_URL"
 
 # Netlify's Next.js adapter (normally auto-detected; listed explicitly so it always runs).
 [[plugins]]
