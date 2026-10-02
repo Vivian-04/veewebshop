@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
+import { GoogleButton } from "@/components/GoogleButton";
 import { Alert, Button, Field } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { colors } from "@/lib/theme";
@@ -39,6 +40,7 @@ export default function SignUpScreen() {
         <Text style={{ fontSize: 22, fontWeight: "700", color: colors.text }}>Create your account</Text>
         <Text style={{ color: colors.muted }}>Works on the website too.</Text>
         {error && <Alert message={error} />}
+        <GoogleButton onError={setError} />
         <Field label="Name" value={name} onChangeText={setName} autoComplete="name" textContentType="name" />
         <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" />
         <Field label="Password (at least 8 characters)" value={password} onChangeText={setPassword} secureTextEntry textContentType="newPassword" />

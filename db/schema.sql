@@ -80,6 +80,15 @@ CREATE TABLE IF NOT EXISTS api_tokens (
 );
 
 CREATE INDEX IF NOT EXISTS api_tokens_user_id_idx ON api_tokens(user_id);
+
+-- Single-use codes handed to the mobile app after Google sign-in, exchanged for an api_token.
+-- The app proves it started the sign-in by sending the verifier whose SHA-256 is `challenge`.
+CREATE TABLE IF NOT EXISTS oauth_codes (
+  code_hash   TEXT PRIMARY KEY,
+  user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  challenge   TEXT NOT NULL,
+  expires_at  TIMESTAMPTZ NOT NULL
+);
 CREATE INDEX IF NOT EXISTS auth_events_email_idx ON auth_events(kind, email, created_at);
 CREATE INDEX IF NOT EXISTS auth_events_ip_idx ON auth_events(kind, ip, created_at);
 CREATE INDEX IF NOT EXISTS orders_user_id_idx ON orders(user_id);

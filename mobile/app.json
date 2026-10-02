@@ -27,11 +27,25 @@
       "expo-status-bar",
       "expo-secure-store",
       "expo-image",
-      "expo-font"
+      "expo-font",
+      "expo-web-browser"
     ],
     "scheme": "shopwithvee",
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d66215d1-8a19-457c-b93d-755012635492"
+      }
+    },
+    "owner": "ifee2004",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d66215d1-8a19-457c-b93d-755012635492"
     }
   }
 }

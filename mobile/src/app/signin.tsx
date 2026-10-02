@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
+import { GoogleButton } from "@/components/GoogleButton";
 import { Alert, Button, Field } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { colors } from "@/lib/theme";
@@ -31,8 +32,9 @@ export default function SignInScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }} keyboardShouldPersistTaps="handled">
         <Text style={{ fontSize: 22, fontWeight: "700", color: colors.text }}>Welcome back</Text>
-        <Text style={{ color: colors.muted }}>Use the same email and password as on the website.</Text>
+        <Text style={{ color: colors.muted }}>Use the same account as on the website.</Text>
         {error && <Alert message={error} />}
+        <GoogleButton onError={setError} />
         <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" />
         <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" onSubmitEditing={submit} />
         <Button title="Sign in" onPress={submit} loading={loading} />

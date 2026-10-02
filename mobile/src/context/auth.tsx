@@ -1,5 +1,9 @@
+import * as Crypto from "expo-crypto";
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ApiError, api, setAuthToken, type User } from "@/lib/api";
+import { API_URL } from "@/lib/config";
 import { deleteItem, getItem, setItem } from "@/lib/storage";
 
 const TOKEN_KEY = "shopwithvee.token";
@@ -10,6 +14,8 @@ type AuthContextValue = {
   ready: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
+  /** Resolves false if the person cancelled. */
+  signInWithGoogle: () => Promise<boolean>;
   signOut: () => Promise<void>;
   /** Re-read the profile (e.g. after checkout saved new delivery details). */
   refreshUser: () => Promise<void>;
@@ -59,6 +65,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [finishSignIn],
   );
 
+  /** Sign in with the website's Google login (see lib/mobile-oauth.ts on the server). Resolves false if cancelled. */
+  const signInWithGoogle = useCallback(async () => {
+    const verifier = Array.from(Crypto.getRandomBytes(32), (b) => b.toString(16).padStart(2, "0")).join("");
+    const challenge = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, verifier);
+    const redirect = Linking.createURL("google-auth");
+    // Built by hand: React Native's URLSearchParams is only partially implemented.
+    const start = `${API_URL}/api/mobile/google/start?redirect=${encodeURIComponent(redirect)}&challenge=${challenge}`;
+
+    // An ephemeral session keeps this sign-in separate from Safari's cookies.
+    const result = await WebBrowser.openAuthSessionAsync(start, redirect, { preferEphemeralSession: true });
+    if (result.type !== "success") return false;
+
+    const { code, error } = Linking.parse(result.url).queryParams ?? {};
+    if (error === "cancelled" || error === "access_denied") return false;
+    if (typeof code !== "string") throw new Error("Google sign-in didn't complete. Please try again.");
+    await finishSignIn(await api("/api/mobile/google/exchange", { method: "POST", body: { code, verifier } }));
+    return true;
+  }, [finishSignIn]);
+
   const signOut = useCallback(async () => {
     try {
       await api("/api/mobile/signout", { method: "POST" });
@@ -75,8 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, ready, signIn, signUp, signOut, refreshUser }),
-    [user, ready, signIn, signUp, signOut, refreshUser],
+    () => ({ user, ready, signIn, signUp, signInWithGoogle, signOut, refreshUser }),
+    [user, ready, signIn, signUp, signInWithGoogle, signOut, refreshUser],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

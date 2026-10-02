@@ -32,7 +32,7 @@ export default function AccountScreen() {
     return (
       <View style={s.signedOut}>
         <Text style={s.title}>Your account</Text>
-        <Text style={s.muted}>Sign in with the same email and password you use on the ShopWithVee website. Your cart follows you between the two.</Text>
+        <Text style={s.muted}>Sign in with the same account you use on the ShopWithVee website (Google or email and password). Your cart follows you between the two.</Text>
         <Button title="Sign in" onPress={() => router.push("/signin")} />
         <Button title="Create an account" variant="secondary" onPress={() => router.push("/signup")} />
       </View>
