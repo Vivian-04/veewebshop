@@ -6,6 +6,12 @@ import { sql, type User } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { clearFailedSignIns, clientIp, isSignInLocked, recordFailedSignIn } from "@/lib/rate-limit";
 
+// On Netlify, requests arrive with an internal per-deploy hostname, which would make Google redirect
+// to the wrong address. Use the site's main URL (Netlify sets URL and CONTEXT) unless AUTH_URL is set.
+if (!process.env.AUTH_URL && process.env.CONTEXT === "production" && process.env.URL) {
+  process.env.AUTH_URL = process.env.URL;
+}
+
 export const googleEnabled = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
 
 const providers: Provider[] = [
