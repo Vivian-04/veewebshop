@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { currentUser, signOut } from "@/auth";
+import { isAdminEmail } from "@/lib/admin";
 import { Avatar } from "@/components/Avatar";
 import { CartProvider } from "@/components/CartProvider";
 import { CartLink } from "@/components/CartLink";
@@ -23,6 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/" className="logo">Shop<span>WithVee</span></Link>
               <nav>
                 <Link href="/">Shop</Link>
+                {isAdminEmail(user?.email) && <Link href="/admin">Admin</Link>}
                 <CartLink />
                 {user ? (
                   <>
@@ -47,7 +49,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </header>
           <main className="container">{children}</main>
           <footer className="site-footer container">
-            © {new Date().getFullYear()} ShopWithVee · Delivering across Lagos Island &amp; Mainland
+            <span>© {new Date().getFullYear()} ShopWithVee · Delivering across Lagos Island &amp; Mainland</span>
+            <span className="footer-links">
+              <Link href="/privacy">Privacy policy</Link>
+              <Link href="/terms">Terms &amp; returns</Link>
+            </span>
           </footer>
         </CartProvider>
       </body>

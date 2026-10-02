@@ -4,6 +4,7 @@ import { currentUser } from "@/auth";
 import { Avatar } from "@/components/Avatar";
 import { sql, type Order } from "@/lib/db";
 import { formatDate, formatPrice } from "@/lib/format";
+import { statusLabel } from "@/lib/orders";
 import { SHIPPING_ZONES } from "@/lib/shipping";
 import { ProfileForm } from "./ProfileForm";
 
@@ -55,7 +56,7 @@ export default async function ProfilePage() {
                     </td>
                     <td>{formatDate(o.created_at)}</td>
                     <td>{SHIPPING_ZONES[o.shipping_zone].label.replace("Lagos ", "")}</td>
-                    <td><span className={`status ${o.status}`}>{o.status}</span></td>
+                    <td><span className={`status ${o.status}`}>{statusLabel(o.status)}</span></td>
                     <td>{formatPrice(o.total_kobo)}</td>
                   </tr>
                 ))}

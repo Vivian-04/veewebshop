@@ -1,8 +1,10 @@
 "use server";
 
+import { after } from "next/server";
 import { currentUser } from "@/auth";
+import { adminEmails } from "@/lib/admin";
 import { sql, type Order, type OrderItem, type Product } from "@/lib/db";
-import { sendOrderConfirmation } from "@/lib/mailgun";
+import { sendNewOrderNotification, sendOrderConfirmation } from "@/lib/mailgun";
 import { SHIPPING_ZONES, isShippingZone, normalizeNigerianPhone, type ShippingZone } from "@/lib/shipping";
 
 type PlaceOrderInput = {
@@ -83,14 +85,22 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderId: num
     return { error: "Something went wrong placing your order. Please try again." };
   }
 
-  // The order is committed; a failed email shouldn't fail the checkout.
-  try {
-    if (await sendOrderConfirmation(user.email, order, items)) {
-      await sql`UPDATE orders SET email_sent_at = now() WHERE id = ${order.id}`;
+  // The order is committed. Send emails after responding, so a slow or failing email
+  // never delays or breaks the customer's checkout.
+  after(async () => {
+    try {
+      if (await sendOrderConfirmation(user.email, order, items)) {
+        await sql`UPDATE orders SET email_sent_at = now() WHERE id = ${order.id}`;
+      }
+    } catch (err) {
+      console.error(`Confirmation email for order ${order.id} failed`, err);
     }
-  } catch (err) {
-    console.error(`Confirmation email for order ${order.id} failed`, err);
-  }
+    try {
+      await sendNewOrderNotification(adminEmails(), user.email, order, items);
+    } catch (err) {
+      console.error(`Admin notification for order ${order.id} failed`, err);
+    }
+  });
 
   return { orderId: order.id };
 }

@@ -4,6 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/auth";
 import { sql, type Order, type OrderItem } from "@/lib/db";
 import { formatDateTime, formatPrice } from "@/lib/format";
+import { emailConfigured } from "@/lib/mailgun";
+import { statusLabel } from "@/lib/orders";
 import { SHIPPING_ZONES } from "@/lib/shipping";
 
 export default async function OrderPage({
@@ -34,8 +36,8 @@ export default async function OrderPage({
       {placed && (
         <div className="alert success">
           Thank you! Your order has been placed. We&apos;ll call {order.shipping_phone} to arrange delivery.
-          {/* email_sent_at only means our email provider accepted the message; delivery isn't guaranteed. */}
-          {order.email_sent_at
+          {/* Emails are sent just after checkout responds, so don't depend on email_sent_at being set yet. */}
+          {emailConfigured()
             ? ` We're sending a confirmation email to ${user.email}. If it doesn't arrive, check your spam folder. Your order is saved either way, and you can always find it on your profile.`
             : " You can always find this order on your profile."}
         </div>
@@ -67,7 +69,7 @@ export default async function OrderPage({
             {"\n"}{SHIPPING_ZONES[order.shipping_zone].label}
           </p>
           <p className="muted">
-            Placed {formatDateTime(order.created_at)} · <span className={`status ${order.status}`}>{order.status}</span>
+            Placed {formatDateTime(order.created_at)} · <span className={`status ${order.status}`}>{statusLabel(order.status)}</span>
           </p>
           <p className="muted small">Payment on delivery.</p>
         </div>

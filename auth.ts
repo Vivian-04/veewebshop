@@ -4,6 +4,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { sql, type User } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
+import { clearFailedSignIns, clientIp, isSignInLocked, recordFailedSignIn } from "@/lib/rate-limit";
 
 export const googleEnabled = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
 
@@ -12,16 +13,24 @@ const providers: Provider[] = [
     id: "credentials",
     name: "Email and password",
     credentials: { email: { type: "email" }, password: { type: "password" } },
-    async authorize(credentials) {
+    async authorize(credentials, request) {
       const email = String(credentials?.email ?? "").trim().toLowerCase();
       const password = String(credentials?.password ?? "");
       if (!email || !password) return null;
 
+      // Enforced here too (not just in the sign-in form) because this endpoint can be called directly.
+      const ip = clientIp(request.headers);
+      if (await isSignInLocked(email, ip)) return null;
+
       const [user] = await sql<{ id: number; email: string; name: string | null; password_hash: string | null }[]>`
         SELECT id, email, name, password_hash FROM users WHERE email = ${email}`;
       // Accounts created with Google have no password.
-      if (!user?.password_hash || !(await verifyPassword(password, user.password_hash))) return null;
+      if (!user?.password_hash || !(await verifyPassword(password, user.password_hash))) {
+        await recordFailedSignIn(email, ip);
+        return null;
+      }
 
+      await clearFailedSignIns(email);
       return { id: String(user.id), email: user.email, name: user.name };
     },
   }),

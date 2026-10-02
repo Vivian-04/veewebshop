@@ -11,6 +11,10 @@ A Nigerian online shop built with Next.js (App Router): naira pricing, Lagos Isl
 - Profile page: your details, saved delivery address and zone (used to pre-fill checkout), and order history
 - Order confirmation email via Mailgun
 - Payment on delivery
+- **Admin area** at `/admin` (only for emails listed in `ADMIN_EMAILS`): all orders with status filters, order details with customer phone/WhatsApp/address, status buttons (New → Confirmed → Out for delivery → Delivered, or Cancelled, which returns items to stock), and price/stock editing. Admins are emailed about every new order.
+- Confirmation and new-order emails are sent after checkout responds, so email never slows down or breaks an order
+- Sign-in protection: 5 failed passwords per email (or 20 per network) locks sign-in for 15 minutes; at most 5 sign-ups per network per hour
+- Privacy policy (`/privacy`) and terms & returns (`/terms`). Fill in the contact placeholders in `lib/site.ts` and review the wording before launch.
 
 Delivery fees are set in [`lib/shipping.ts`](lib/shipping.ts) (Mainland ₦3,000, Island ₦5,000). Money is stored in kobo (₦1 = 100 kobo).
 

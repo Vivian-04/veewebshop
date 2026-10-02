@@ -183,3 +183,31 @@ label.checkbox input { accent-color: var(--accent); width: 16px; height: 16px; }
   .profile-cols { grid-template-columns: 1fr; }
   table.orders th:nth-child(3), table.orders td:nth-child(3) { display: none; }
 }
+
+/* --- Admin, legal pages, footer --- */
+.site-footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.footer-links { display: flex; gap: 16px; }
+.footer-links a:hover { color: var(--accent); }
+.btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
+.btn.danger:hover:not(:disabled) { border-color: var(--danger); }
+.admin-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+.admin-bar h1 { margin: 0; font-size: 1.5rem; }
+.admin-bar .chips { margin: 0; }
+.admin-order-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0 16px; }
+.admin-order-head h2 { margin: 0; }
+.admin-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.admin-product { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.admin-product:last-child { border-bottom: 0; }
+.admin-product .line-img { width: 48px; height: 48px; }
+.admin-product-name { flex: 1; min-width: 160px; }
+.admin-product-form { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.admin-product-form label { gap: 2px; }
+.admin-product-form input { width: 110px; padding: 7px 10px; }
+.saved-note { color: var(--success); font-size: .85rem; }
+.error-note { color: var(--danger); font-size: .85rem; }
+.status.cancelled { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+.status.pending { background: color-mix(in srgb, #d08a00 16%, transparent); color: #a86f00; }
+.legal { max-width: 760px; margin: 24px auto; line-height: 1.65; }
+.legal h1 { margin-top: 0; }
+.legal h2 { margin-top: 24px; }
+.legal ul { padding-left: 20px; }

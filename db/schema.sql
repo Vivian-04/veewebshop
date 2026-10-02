@@ -48,5 +48,16 @@ CREATE TABLE IF NOT EXISTS order_items (
   quantity     INTEGER NOT NULL CHECK (quantity > 0)
 );
 
+-- Failed sign-ins and sign-ups, used to slow down password guessing and spam accounts.
+CREATE TABLE IF NOT EXISTS auth_events (
+  id          BIGSERIAL PRIMARY KEY,
+  kind        TEXT NOT NULL CHECK (kind IN ('signin_failed', 'signup')),
+  email       TEXT,
+  ip          TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS auth_events_email_idx ON auth_events(kind, email, created_at);
+CREATE INDEX IF NOT EXISTS auth_events_ip_idx ON auth_events(kind, ip, created_at);
 CREATE INDEX IF NOT EXISTS orders_user_id_idx ON orders(user_id);
 CREATE INDEX IF NOT EXISTS order_items_order_id_idx ON order_items(order_id);
