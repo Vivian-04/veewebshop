@@ -8,7 +8,6 @@ import { Avatar } from "@/components/Avatar";
 import { useCart } from "@/components/CartProvider";
 import { formatPrice } from "@/lib/format";
 import { SHIPPING_ZONES, type ShippingZone } from "@/lib/shipping";
-import { placeOrder } from "./actions";
 
 type Profile = {
   name: string;
@@ -20,7 +19,7 @@ type Profile = {
 };
 
 export function CheckoutForm({ profile }: { profile: Profile }) {
-  const { items, subtotalKobo, clear, ready } = useCart();
+  const { items, subtotalKobo, refresh, ready } = useCart();
   const router = useRouter();
   const [zone, setZone] = useState<ShippingZone | null>(profile.zone);
   const [error, setError] = useState<string | null>(null);
@@ -56,22 +55,33 @@ export function CheckoutForm({ profile }: { profile: Profile }) {
       return;
     }
     startTransition(async () => {
-      const result = await placeOrder({
-        items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-        zone,
-        shipping: {
-          name: String(formData.get("name") ?? ""),
-          phone: String(formData.get("phone") ?? ""),
-          address: String(formData.get("address") ?? ""),
-        },
-        saveToProfile: formData.get("saveToProfile") === "on",
-      });
-      if ("error" in result) {
-        setError(result.error);
+      // Same endpoint the mobile app uses; the server checks out the saved cart.
+      let result: { orderId?: number; error?: string };
+      try {
+        const res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            zone,
+            shipping: {
+              name: String(formData.get("name") ?? ""),
+              phone: String(formData.get("phone") ?? ""),
+              address: String(formData.get("address") ?? ""),
+            },
+            saveToProfile: formData.get("saveToProfile") === "on",
+          }),
+        });
+        result = await res.json();
+      } catch {
+        result = { error: "Couldn't reach the shop. Check your connection and try again." };
+      }
+      if (!result.orderId) {
+        setError(result.error ?? "Something went wrong placing your order. Please try again.");
+        refresh(); // the cart may have changed (e.g. stock ran out)
         return;
       }
       setPlacedOrderId(result.orderId);
-      clear();
+      refresh();
       router.push(`/orders/${result.orderId}?placed=1`);
     });
   }

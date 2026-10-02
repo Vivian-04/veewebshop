@@ -2,9 +2,9 @@ import NextAuth from "next-auth";
 import type { Provider } from "next-auth/providers";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+import { checkPassword } from "@/lib/accounts";
 import { sql, type User } from "@/lib/db";
-import { verifyPassword } from "@/lib/password";
-import { clearFailedSignIns, clientIp, isSignInLocked, recordFailedSignIn } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/rate-limit";
 
 // On Netlify, requests arrive with an internal per-deploy hostname, which would make Google redirect
 // to the wrong address. Use the site's main URL (Netlify sets URL and CONTEXT) unless AUTH_URL is set.
@@ -20,24 +20,10 @@ const providers: Provider[] = [
     name: "Email and password",
     credentials: { email: { type: "email" }, password: { type: "password" } },
     async authorize(credentials, request) {
-      const email = String(credentials?.email ?? "").trim().toLowerCase();
-      const password = String(credentials?.password ?? "");
-      if (!email || !password) return null;
-
-      // Enforced here too (not just in the sign-in form) because this endpoint can be called directly.
-      const ip = clientIp(request.headers);
-      if (await isSignInLocked(email, ip)) return null;
-
-      const [user] = await sql<{ id: number; email: string; name: string | null; password_hash: string | null }[]>`
-        SELECT id, email, name, password_hash FROM users WHERE email = ${email}`;
-      // Accounts created with Google have no password.
-      if (!user?.password_hash || !(await verifyPassword(password, user.password_hash))) {
-        await recordFailedSignIn(email, ip);
-        return null;
-      }
-
-      await clearFailedSignIns(email);
-      return { id: String(user.id), email: user.email, name: user.name };
+      // Limits are enforced here too (not just in the sign-in form) because this endpoint can be called directly.
+      const result = await checkPassword(String(credentials?.email ?? ""), String(credentials?.password ?? ""), clientIp(request.headers));
+      if (!result.ok) return null;
+      return { id: String(result.user.id), email: result.user.email, name: result.user.name };
     },
   }),
 ];

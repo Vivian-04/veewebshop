@@ -57,6 +57,29 @@ CREATE TABLE IF NOT EXISTS auth_events (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Each signed-in user's cart, shared by the website and the mobile app.
+CREATE TABLE IF NOT EXISTS cart_items (
+  user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  product_id  BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  quantity    INTEGER NOT NULL CHECK (quantity BETWEEN 1 AND 99),
+  added_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, product_id)
+);
+
+-- Bumped on every cart change, so clients can cheaply check whether their copy is stale.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS cart_version BIGINT NOT NULL DEFAULT 0;
+
+-- Sign-in tokens for the mobile app (the website uses Auth.js cookies). Only a SHA-256 hash is stored.
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id            BIGSERIAL PRIMARY KEY,
+  user_id       BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash    TEXT UNIQUE NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_used_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at    TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS api_tokens_user_id_idx ON api_tokens(user_id);
 CREATE INDEX IF NOT EXISTS auth_events_email_idx ON auth_events(kind, email, created_at);
 CREATE INDEX IF NOT EXISTS auth_events_ip_idx ON auth_events(kind, ip, created_at);
 CREATE INDEX IF NOT EXISTS orders_user_id_idx ON orders(user_id);

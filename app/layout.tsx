@@ -18,7 +18,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en-NG">
       <body>
-        <CartProvider>
+        <CartProvider signedIn={Boolean(user)}>
           <header className="site-header">
             <div className="container header-inner">
               <Link href="/" className="logo">Shop<span>WithVee</span></Link>
