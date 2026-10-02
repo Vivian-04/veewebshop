@@ -1,8 +1,13 @@
 [build]
   command = "npm run build"
+  publish = ".next"
 
 [build.environment]
   # Netlify's secret scanner fails the build if an env var's value appears in the repo.
   # These two aren't secret: MAILGUN_API_BASE is Mailgun's public API URL, and ADMIN_EMAILS
   # is the same address shown as the public contact email. All real secrets are still scanned.
   SECRETS_SCAN_OMIT_KEYS = "MAILGUN_API_BASE,ADMIN_EMAILS"
+
+# Netlify's Next.js adapter (normally auto-detected; listed explicitly so it always runs).
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
